@@ -15,7 +15,14 @@ android {
             // line and edit it to point to Python 3.4 or later.
             // buildPython "C:/Python36/python.exe"
 
+//            buildPython "py -3.4"
             staticProxy "hello"
+            pip {
+                install "numpy"
+                install "opencv-python"
+//                install "opencv-contrib-python==3.2.0.7"
+                install "imutils"
+            }
         }
         ndk {
             abiFilters "armeabi-v7a", "x86"
@@ -62,7 +69,8 @@ dependencies {
     // Image loader
     implementation 'com.github.bumptech.glide:glide:4.9.0'
 
-
+    //zxing
+    implementation 'com.google.zxing:core:3.3.3'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.1.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'

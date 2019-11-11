@@ -316,7 +316,4 @@ public abstract class BaseFragment<P extends BasePresenter<V>, V extends BaseVie
 //        }
     }
 
-    abstract void onRetry();
-
-    abstract void onRefreshData();
 }

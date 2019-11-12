@@ -13,6 +13,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
@@ -71,11 +72,7 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
         frParent.addView(mPreview);
 
 
-        Python py = Python.getInstance();
-        PyObject console = py.getModule("scan");
-        PyObject pyObject = console.callAttr("scan",11);
-        int value = pyObject.toInt();
-        Log.v("ahuhu","def : "+value);
+
     }
 
     public boolean isCameraAvailable() {
@@ -110,35 +107,14 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
     public void onPreviewFrame(byte[] data, Camera camera) {
         Camera.Parameters parameters = camera.getParameters();
         Camera.Size size = parameters.getPreviewSize();
-        Log.v("ahihi", "code : " + data);
 
-        Bitmap bitmapTest = BitmapFactory.decodeByteArray(data, 0, data.length);
-//
-//
-//        PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
-//                data, size.width, size.height, 0, 0, size.width, size.height, false);
-//        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-//        Reader reader = new MultiFormatReader();
-//        Result result = null;
-//        try {
-//            result = reader.decode(bitmap);
-//            String symData = result.getText();
-//            Log.v("ahihi", "code null: " + symData);
-//            if (!TextUtils.isEmpty(symData)) {
-//                Log.v("ahihi", "code : " + symData + " result :" + result);
-//                if (mCamera != null) {
-//                    mCamera.cancelAutoFocus();
-//                    mCamera.setPreviewCallback(null);
-//                    mCamera.stopPreview();
-//                }
-//                stopCameraPreview();
-//                mPreviewing = false;
-//                destroyCamera();
-//            }
-//        } catch (Exception e) {
-//            Log.v("ahihi", "error : " + e.toString());
-//            e.printStackTrace();
-//        }
+        Log.v("kiki","data "+data);
+
+        Python py = Python.getInstance();
+        PyObject console = py.getModule("color_barcode_scanner");
+        PyObject pyObject = console.callAttr("scan","");
+        String value = pyObject.toString();
+        Log.v("ahuhu","def : "+value);
     }
 
     private void stopCameraPreview() {

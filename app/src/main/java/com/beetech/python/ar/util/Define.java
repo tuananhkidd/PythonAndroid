@@ -22,16 +22,11 @@ public class Define {
 
     public static class Api {
 
-        public static final String GET_LIST_TRAVELS_URL = "api/travels/";
-
         public static class BaseResponse {
 
         }
 
         public static class HttpCode {
-            public static final Integer NETWORK_NOT_CONNECT = 1001;
-            public static final Integer CANNOT_CONNECT_TO_SERVER = 1002;
-            public static final Integer RESPONSE_CODE_ACCESS_TOKEN_EXPIRED = 403;
             public static final Integer NOT_FOUND = 404;
         }
 

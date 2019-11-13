@@ -2,18 +2,23 @@ package com.beetech.python.ar.view.impl;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.hardware.Camera;
 import android.os.Handler;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
+import android.renderscript.Type;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
@@ -28,9 +33,14 @@ import com.beetech.python.ar.view.ScanView;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
+import java.io.ByteArrayOutputStream;
+
 import javax.inject.Inject;
 
 import butterknife.BindView;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 
 public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> implements ScanView, Camera.PreviewCallback {
     private CameraPreview mPreview;
@@ -72,7 +82,6 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
         frParent.addView(mPreview);
 
 
-
     }
 
     public boolean isCameraAvailable() {
@@ -107,14 +116,67 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
     public void onPreviewFrame(byte[] data, Camera camera) {
         Camera.Parameters parameters = camera.getParameters();
         Camera.Size size = parameters.getPreviewSize();
+//
+        Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
+        Allocation bmData = renderScriptNV21ToRGBA8888(
+                getActivity(), size.width, size.height, data);
+        bmData.copyTo(bitmap);
 
-        Log.v("kiki","data "+data);
+//        try {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream.toByteArray();
+        String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+        encoded = encoded.replace("\n", "");
 
         Python py = Python.getInstance();
         PyObject console = py.getModule("color_barcode_scanner");
-        PyObject pyObject = console.callAttr("scan","");
-        String value = pyObject.toString();
-        Log.v("ahuhu","def : "+value);
+        PyObject pyObject = console.callAttr("scan", encoded);
+        if (pyObject != null) {
+            String value = pyObject.toString();
+            Log.v("ahuhu", "def : " + value);
+        }
+
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+
+    }
+
+    public Allocation renderScriptNV21ToRGBA8888(Context context, int width, int height, byte[] nv21) {
+        RenderScript rs = RenderScript.create(context);
+        ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+
+        Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
+        Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+
+        Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+        Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+
+        in.copyFrom(nv21);
+
+        yuvToRgbIntrinsic.setInput(in);
+        yuvToRgbIntrinsic.forEach(out);
+        return out;
+    }
+
+    private void processData(byte[] data) {
+        Observable.fromCallable(() -> {
+            Python py = Python.getInstance();
+            PyObject console = py.getModule("scan");
+            PyObject pyObject = console.callAttr("scan", 123);
+            String value = pyObject.toString();
+
+            return value;
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe((result) -> {
+                    Log.v("ahuhu", "value : " + result);
+                }, throwable -> {
+
+                });
     }
 
     private void stopCameraPreview() {

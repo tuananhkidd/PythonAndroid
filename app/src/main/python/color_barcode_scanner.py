@@ -1,9 +1,10 @@
 # import the necessary packages
+from transform import four_point_transform
+import numpy as np
 import cv2
 import imutils
-import numpy as np
-
-from transform import four_point_transform
+import base64
+from imutils.video import VideoStream
 
 num_cols = 4
 num_groups = 6
@@ -49,9 +50,11 @@ def localize(image, width=800):
             if check:
                 # show the contour (outline) of the piece of paper
                 cv2.drawContours(image, [approx], -1, (0, 0, 255), 2)
-                # warped = warped[white_pad:-white_pad, white_pad // 2:-white_pad, :]
-                cv2.imshow("Detect", image)
+                warped = warped[white_pad:-white_pad, white_pad // 2:-white_pad, :]
+                # cv2.imshow("Detect", image)
                 # cv2.waitKey(0)
+                print("Detected"
+                      "")
                 return warped
 
     return None
@@ -111,9 +114,8 @@ def cal_barcode_id(image):
         # Calculate the length of clusters of colorbar
         clusters = []
         previous_cluster = -10  # ignore the first and last edge
-        center = thresh.shape[0] // 2
         for i in range(thresh.shape[1]):
-            if thresh[center][i] != 0:
+            if thresh[thickness // 2][i] != 0:
                 if i < previous_cluster + 5:
                     continue
                 cluster = i - previous_cluster
@@ -128,7 +130,7 @@ def cal_barcode_id(image):
             # print("Min cluster:", tol_min_cluster)
             # print("Max cluster:", max(clusters))
             barcode = "".join([str(round(c / tol_min_cluster)) for c in clusters])
-            # print("=>Scanned ID:", barcode)
+            print("=>Scanned ID:", barcode)
 
             if validate_barcode_id(barcode):
                 return barcode
@@ -139,12 +141,11 @@ def cal_barcode_id(image):
         return None
 
 
-def scan(byte_image, width=800):
-    print ("ahihi")
-    print (type(byte_image))
-    print(byte_image)
+def scan(b64_image, width=800):
+    byte_image = base64.b64decode(b64_image)
     nparr = np.fromstring(byte_image, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
     barcode = localize(image, width)
     if barcode is None:
         return None

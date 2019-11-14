@@ -2,11 +2,19 @@ package com.beetech.python.ar.view.impl;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
+import android.hardware.camera2.CameraDevice;
+import android.media.ExifInterface;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
@@ -15,6 +23,7 @@ import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Surface;
 import android.view.View;
 import android.view.animation.Animation;
 import android.widget.FrameLayout;
@@ -29,18 +38,18 @@ import com.beetech.python.ar.injection.DaggerScanViewComponent;
 import com.beetech.python.ar.injection.ScanViewModule;
 import com.beetech.python.ar.presenter.ScanPresenter;
 import com.beetech.python.ar.presenter.loader.PresenterFactory;
+import com.beetech.python.ar.util.FileUtil;
 import com.beetech.python.ar.view.ScanView;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 import javax.inject.Inject;
 
 import butterknife.BindView;
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
 
 public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> implements ScanView, Camera.PreviewCallback {
     private CameraPreview mPreview;
@@ -52,6 +61,7 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
     RelativeLayout frParent;
     @BindView(R.id.view)
     View view;
+    CameraDevice cameraDevice;
 
     @Inject
     PresenterFactory<ScanPresenter> mPresenterFactory;
@@ -80,6 +90,30 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
 
         mPreview.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         frParent.addView(mPreview);
+
+//        new Handler().postDelayed(()->{
+//
+//            Bitmap bitmap = BitmapFactory.decodeResource(getResources(),R.drawable.demo);
+//
+//            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+//            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+//            byte[] byteArray = byteArrayOutputStream.toByteArray();
+//            String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+//            encoded = encoded.replace("\n", "");
+//
+//            Python py = Python.getInstance();
+//            PyObject console = py.getModule("color_barcode_scanner");
+//            PyObject pyObject = console.callAttr("scan", encoded);
+//            Log.v("ahuhu", "object : " + pyObject);
+//
+//            Toast.makeText(getContext(), "object : " + pyObject, Toast.LENGTH_SHORT).show();
+//            String value = "";
+//            if (pyObject != null) {
+//                value = pyObject.toString();
+//                Toast.makeText(getContext(), "def : " + value, Toast.LENGTH_SHORT).show();
+//                Log.v("ahuhu", "def : " + value);
+//            }
+//        },5000);
 
 
     }
@@ -114,17 +148,35 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+        setCameraDisplayOrientation(getActivity(), Camera.CameraInfo.CAMERA_FACING_BACK, camera);
         Camera.Parameters parameters = camera.getParameters();
         Camera.Size size = parameters.getPreviewSize();
-//
-        Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
-        Allocation bmData = renderScriptNV21ToRGBA8888(
-                getActivity(), size.width, size.height, data);
-        bmData.copyTo(bitmap);
+
+//        Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
+//        Allocation bmData = renderScriptNV21ToRGBA8888(
+//                getActivity(), size.width, size.height, yuv);
+//        bmData.copyTo(bitmap);
+
+
+        ByteArrayOutputStream outstr = new ByteArrayOutputStream();
+        Rect rect = new Rect(0, 0, size.width, size.height);
+        YuvImage yuvimage = new YuvImage(data, parameters.getPreviewFormat(), size.width, size.height, null);
+        yuvimage.compressToJpeg(rect, 100, outstr);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(outstr.toByteArray(), 0, outstr.size());
+        Bitmap bitmapTest = BitmapFactory.decodeByteArray(data, 0, data.length);
+
+
+//        bitmap = FileUtil.rotateImage(bitmap,90);
 
 //        try {
+//            FileUtil.saveBitmapToFile(bitmap,FileUtil.createImageFile(System.currentTimeMillis()+""));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
+
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
         byte[] byteArray = byteArrayOutputStream.toByteArray();
         String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
         encoded = encoded.replace("\n", "");
@@ -132,16 +184,65 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
         Python py = Python.getInstance();
         PyObject console = py.getModule("color_barcode_scanner");
         PyObject pyObject = console.callAttr("scan", encoded);
+        Log.v("ahuhu", "object : " + pyObject);
+        String value = "";
         if (pyObject != null) {
-            String value = pyObject.toString();
+            value = pyObject.toString();
+
+            byte[] decodedString = Base64.decode(value, Base64.DEFAULT);
+            Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+
             Log.v("ahuhu", "def : " + value);
         }
-
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+    }
 
 
+    @SuppressLint("StaticFieldLeak")
+    private class ProcessPreviewDataTask extends AsyncTask<byte[], Void, String> {
+        Camera camera;
+
+        ProcessPreviewDataTask(Camera camera) {
+            this.camera = camera;
+        }
+
+        @Override
+        protected String doInBackground(byte[]... datas) {
+            Log.i("ahihi", "background process started");
+            byte[] data = datas[0];
+            if (camera == null) {
+                return "";
+            }
+            Camera.Parameters parameters = camera.getParameters();
+            Camera.Size size = parameters.getPreviewSize();
+            Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
+            Allocation bmData = renderScriptNV21ToRGBA8888(
+                    getActivity(), size.width, size.height, data);
+            bmData.copyTo(bitmap);
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+            String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+            encoded = encoded.replace("\n", "");
+
+            Python py = Python.getInstance();
+            PyObject console = py.getModule("color_barcode_scanner");
+            PyObject pyObject = console.callAttr("scan", encoded);
+            Log.v("ahuhu", "object : " + pyObject);
+            String value = "";
+            if (pyObject != null) {
+                value = pyObject.toString();
+                Log.v("ahuhu", "def : " + value);
+            }
+
+            return value;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Log.i("ahihi", "running onPostExecute " + result);
+
+        }
     }
 
     public Allocation renderScriptNV21ToRGBA8888(Context context, int width, int height, byte[] nv21) {
@@ -161,23 +262,6 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
         return out;
     }
 
-    private void processData(byte[] data) {
-        Observable.fromCallable(() -> {
-            Python py = Python.getInstance();
-            PyObject console = py.getModule("scan");
-            PyObject pyObject = console.callAttr("scan", 123);
-            String value = pyObject.toString();
-
-            return value;
-        })
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe((result) -> {
-                    Log.v("ahuhu", "value : " + result);
-                }, throwable -> {
-
-                });
-    }
 
     private void stopCameraPreview() {
         if (mCamera != null) {
@@ -196,6 +280,7 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
                 cancelRequest();
                 return;
             }
+
             mPreview.setCamera(mCamera);
             mPreview.showSurfaceView();
             mPreviewing = true;
@@ -203,6 +288,39 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
             e.printStackTrace();
         }
 
+    }
+
+    public static void setCameraDisplayOrientation(Activity activity,
+                                                   int cameraId, android.hardware.Camera camera) {
+        android.hardware.Camera.CameraInfo info =
+                new android.hardware.Camera.CameraInfo();
+        android.hardware.Camera.getCameraInfo(cameraId, info);
+        int rotation = activity.getWindowManager().getDefaultDisplay()
+                .getRotation();
+        int degrees = 0;
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
+
+        int result;
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+            result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
     }
 
     private void destroyCamera() {

@@ -1,6 +1,7 @@
 package com.beetech.python.ar.view.impl;
 
 import android.content.pm.PackageManager;
+import android.graphics.Point;
 
 import androidx.annotation.NonNull;
 
@@ -22,7 +23,7 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
     ViewController mViewController;
 
     private static final int REQUEST_CAMERA_PERMISSION = 200;
-
+    public static Point screenParametersPoint = new Point();
 
     @Override
     protected void setupComponent(@NonNull AppComponent parentComponent) {
@@ -53,11 +54,12 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
     public void initView() {
 //        ActivityCompat.requestPermissions(this, new
 //                String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        getWindowManager().getDefaultDisplay().getSize(screenParametersPoint);
     }
 
     @Override
     public void initData() {
-        getViewController().addFragment(ScanFragment.class,null);
+        getViewController().addFragment(ScanColorBarCodeFragment.class,null);
     }
 
     @Override

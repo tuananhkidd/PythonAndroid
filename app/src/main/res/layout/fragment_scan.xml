@@ -7,14 +7,20 @@
     tools:context=".view.impl.ScanFragment"
     >
 
+
+
     <RelativeLayout
         android:id="@+id/fr_parent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".view.impl.ScanFragment"/>
+        tools:context=".view.impl.ScanFragment"
+        />
+
     <View
         android:id="@+id/view"
         android:layout_width="match_parent"
         android:layout_height="2dp"
-        android:layout_centerVertical="true"/>
+        android:layout_centerVertical="true"
+        />
+
 </RelativeLayout>

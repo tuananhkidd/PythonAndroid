@@ -47,7 +47,14 @@ def four_point_transform(image, pts):
     heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
     maxHeight = max(int(heightA), int(heightB))
 
-    if maxHeight <= 0 or maxWidth < 100 or maxWidth / maxHeight < 5 or abs(widthA-widthB) > 5 or abs(heightA-heightB) > 5:
+    if maxHeight == 0 or maxWidth == 0 or abs(widthA-widthB) > 5 or abs(heightA-heightB) > 5:
+        return False, None
+
+    ratio = maxWidth / maxHeight
+
+    dim = 0 if ratio > 1 else 1
+
+    if (dim == 0 and maxWidth < 100 and ratio < 10) or (dim == 1 and maxHeight < 100 and ratio > 0.1):
         return False, None
 
     # now that we have the dimensions of the new image, construct
@@ -64,6 +71,9 @@ def four_point_transform(image, pts):
     # compute the perspective transform matrix and then apply it
     M = cv2.getPerspectiveTransform(rect, dst)
     warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
+
+    if dim == 1:
+        warped = np.rot90(warped, 3)
 
     # return the warped image
     return True, warped

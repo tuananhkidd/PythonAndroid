@@ -4,15 +4,21 @@ import numpy as np
 import cv2
 import imutils
 import base64
-from imutils.video import VideoStream
+from PIL import Image
+from io import BytesIO
 
+
+# Declare constant variable
 num_cols = 4
 num_groups = 6
 len_group = 8
-thickness = 10
-white_pad = 5
-black_pad = 3
-dim = 0
+# thickness = 10
+# white_pad = 5
+# black_pad = 3
+
+WIDTH = 800  # Width of image
+TRIM = 3  # Trim 4 edges of colorbar
+DIS_CLUSTER = 5  # Distance between clusters of colorbar
 
 
 def localize(image, width=800):
@@ -46,15 +52,18 @@ def localize(image, width=800):
             # apply the four point transform to obtain a top-down
             # view of the original image
             check, warped = four_point_transform(orig, approx.reshape(4, 2) * ratio)
+            # check, warped = four_point_transform(image, approx.reshape(4, 2))
 
             if check:
                 # show the contour (outline) of the piece of paper
                 cv2.drawContours(image, [approx], -1, (0, 0, 255), 2)
-                warped = warped[white_pad:-white_pad, white_pad // 2:-white_pad, :]
-                # cv2.imshow("Detect", image)
+
+                # retval, buffer = cv2.imencode('.jpg', image)
+                # return base64.b64encode(buffer).decode("utf-8")
+
+                warped = warped[TRIM:-TRIM, TRIM:-TRIM, :]
+                #cv2.imshow("Detect", image)
                 # cv2.waitKey(0)
-                print("Detected"
-                      "")
                 return warped
 
     return None
@@ -103,20 +112,24 @@ def cal_barcode_id(image):
         ret, thresh = cv2.threshold(absGradX, 50, 255, 0)
 
         # erosion followed by dilation to removing noise
-        rectKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 3))
+        rectKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 3))
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, rectKernel)
 
-        # cv2.imshow("Warped", image)
+        # retval, buffer = cv2.imencode('.jpg', thresh)
+        # return base64.b64encode(buffer).decode("utf-8")
+
+        #cv2.imshow("Warped", image)
         # cv2.imshow("Gray", gray)
         # cv2.imshow("Gradient", absGradX)
-        # cv2.imshow("Thresh", thresh)
+        #cv2.imshow("Thresh", thresh)
 
         # Calculate the length of clusters of colorbar
         clusters = []
         previous_cluster = -10  # ignore the first and last edge
+        center = thresh.shape[0]//2
         for i in range(thresh.shape[1]):
-            if thresh[thickness // 2][i] != 0:
-                if i < previous_cluster + 5:
+            if thresh[center][i] != 0:
+                if i < previous_cluster + DIS_CLUSTER:
                     continue
                 cluster = i - previous_cluster
                 # print(cluster)
@@ -125,15 +138,18 @@ def cal_barcode_id(image):
 
         clusters = clusters[1:]
         min_cluster = min(clusters)
+        # print()
         for tolerance in range(-2, 3):
             tol_min_cluster = min_cluster + tolerance
             # print("Min cluster:", tol_min_cluster)
             # print("Max cluster:", max(clusters))
             barcode = "".join([str(round(c / tol_min_cluster)) for c in clusters])
-            print("=>Scanned ID:", barcode)
+            # print("=>Scanned ID:", barcode)
 
             if validate_barcode_id(barcode):
+                # cv2.waitKey(0)
                 return barcode
+        # cv2.waitKey(0)
 
         return None
     except Exception as e:
@@ -141,13 +157,29 @@ def cal_barcode_id(image):
         return None
 
 
-def scan(b64_image, width=800):
-    byte_image = base64.b64decode(b64_image)
-    nparr = np.fromstring(byte_image, np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+def scan(b64_image_str, width=800):
+    # byte_image = base64.decodebytes(b64_image_str.encode("utf-8"))
+    # # nparr = np.fromstring(byte_image, np.uint8)
+    # image = np.frombuffer(byte_image, np.uint8).reshape(size_h, size_w, 3)
+
+
+    decoded_image = base64.b64decode(b64_image_str)
+    img = Image.open(BytesIO(decoded_image))
+    image = np.asarray(img, dtype='uint8')
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+    # return base64.b64encode(image).decode("utf-8")
+
 
     barcode = localize(image, width)
+
+    # # return barcode
+
     if barcode is None:
         return None
     barcode_id = cal_barcode_id(barcode)
+
+    # thresh = cal_barcode_id(barcode)
+    # return thresh
+
     return barcode_id

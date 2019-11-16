@@ -59,7 +59,7 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
 
     @Override
     public void initData() {
-        getViewController().addFragment(ScanColorBarCodeFragment.class,null);
+        getViewController().addFragment(ScanFragment.class,null);
     }
 
     @Override

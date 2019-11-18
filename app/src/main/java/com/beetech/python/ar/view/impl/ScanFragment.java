@@ -26,6 +26,7 @@ import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
@@ -36,6 +37,7 @@ import com.beetech.python.ar.injection.DaggerScanViewComponent;
 import com.beetech.python.ar.injection.ScanViewModule;
 import com.beetech.python.ar.presenter.ScanPresenter;
 import com.beetech.python.ar.presenter.loader.PresenterFactory;
+import com.beetech.python.ar.util.FileUtil;
 import com.beetech.python.ar.view.ScanView;
 import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
@@ -159,10 +161,6 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
             camera.setParameters(parameters);
             Camera.Size size = parameters.getPreviewSize();
 
-//        Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
-//        Allocation bmData = renderScriptNV21ToRGBA8888(
-//                getActivity(), size.width, size.height, yuv);
-//        bmData.copyTo(bitmap);
 
             ByteArrayOutputStream outstr = new ByteArrayOutputStream();
             Rect rect = new Rect(0, 0, size.width, size.height);
@@ -192,6 +190,7 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
                 value = pyObject.toString();
                 if (!TextUtils.isEmpty(value)) {
                     Log.v("ahuhu", "def : " + value);
+                    Toast.makeText(getContext(), value, Toast.LENGTH_SHORT).show();
 //                    stopCameraPreview();
 //        }
                 }
@@ -217,7 +216,7 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
             Camera.Parameters parameters = camera.getParameters();
             Camera.Size size = parameters.getPreviewSize();
             Bitmap bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888);
-            Allocation bmData = renderScriptNV21ToRGBA8888(
+            Allocation bmData = FileUtil.renderScriptNV21ToRGBA8888(
                     getActivity(), size.width, size.height, data);
             bmData.copyTo(bitmap);
 
@@ -245,23 +244,6 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
             Log.i("ahihi", "running onPostExecute " + result);
 
         }
-    }
-
-    public Allocation renderScriptNV21ToRGBA8888(Context context, int width, int height, byte[] nv21) {
-        RenderScript rs = RenderScript.create(context);
-        ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
-
-        Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
-        Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
-
-        Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
-        Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
-
-        in.copyFrom(nv21);
-
-        yuvToRgbIntrinsic.setInput(in);
-        yuvToRgbIntrinsic.forEach(out);
-        return out;
     }
 
 

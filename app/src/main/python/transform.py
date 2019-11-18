@@ -54,7 +54,7 @@ def four_point_transform(image, pts):
 
     dim = 0 if ratio > 1 else 1
 
-    if (dim == 0 and maxWidth < 100 and ratio < 10) or (dim == 1 and maxHeight < 100 and ratio > 0.1):
+    if (dim == 0 and (maxWidth < 100 or ratio < 10)) or (dim == 1 and (maxHeight < 100 or ratio > 0.1)):
         return False, None
 
     # now that we have the dimensions of the new image, construct

@@ -1,9 +1,13 @@
 package com.beetech.python.ar.view.impl;
 
+import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.beetech.python.ar.R;
 import com.beetech.python.ar.base.view.ViewController;
@@ -29,7 +33,7 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
     protected void setupComponent(@NonNull AppComponent parentComponent) {
         DaggerHomeViewComponent.builder()
                 .appComponent(parentComponent)
-                .homeViewModule(new HomeViewModule(this,getRootViewId()))
+                .homeViewModule(new HomeViewModule(this, getRootViewId()))
                 .build()
                 .inject(this);
     }
@@ -52,14 +56,17 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
 
     @Override
     public void initView() {
-//        ActivityCompat.requestPermissions(this, new
-//                String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-        getWindowManager().getDefaultDisplay().getSize(screenParametersPoint);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new
+                    String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        } else {
+            getViewController().addFragment(ScanFragment.class, null);
+        }
+
     }
 
     @Override
     public void initData() {
-        getViewController().addFragment(ScanFragment.class,null);
     }
 
     @Override
@@ -72,10 +79,10 @@ public final class HomeActivity extends BaseActivity<HomePresenter, HomeView> im
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-//                    getViewController().addFragment(ScanFragment.class,null);
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    getViewController().addFragment(ScanFragment.class, null);
                 } else {
-//                    Toast.makeText(getApplicationContext(), "Permission Denied!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Permission Denied!", Toast.LENGTH_SHORT).show();
                     finish();
                 }
         }

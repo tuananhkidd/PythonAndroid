@@ -43,6 +43,7 @@ import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
 
 import javax.inject.Inject;
 
@@ -190,8 +191,10 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
                 value = pyObject.toString();
                 if (!TextUtils.isEmpty(value)) {
                     Log.v("ahuhu", "def : " + value);
-                    Toast.makeText(getContext(), value, Toast.LENGTH_SHORT).show();
-//                    stopCameraPreview();
+                    HashMap<String,String> bundle = new HashMap<>();
+                    bundle.put("scan",value);
+                    getViewController().addFragment(ResultScanFragment.class,bundle);
+                    stopCameraPreview();
 //        }
                 }
             }
@@ -316,6 +319,12 @@ public final class ScanFragment extends BaseFragment<ScanPresenter, ScanView> im
     @Override
     public void onResume() {
         super.onResume();
+        initCamera();
+    }
+
+    @Override
+    public void backFromAddFragment() {
+        super.backFromAddFragment();
         initCamera();
     }
 
